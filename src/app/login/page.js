@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../../i18n/useTranslation';
+import { API_ENDPOINTS } from '../../utils/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/sign_in', {
+      const response = await fetch(API_ENDPOINTS.SIGN_IN, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from '../../i18n/useTranslation';
+import { API_ENDPOINTS } from '../../utils/api';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/sign_up', {
+      const response = await fetch(API_ENDPOINTS.SIGN_UP, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

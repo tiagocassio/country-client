@@ -6,6 +6,7 @@ import { useAuth } from './contexts/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import { useTranslation } from '../i18n/useTranslation';
+import { API_ENDPOINTS } from '../utils/api';
 
 export default function Home() {
   const [countries, setCountries] = useState([]);
@@ -14,19 +15,15 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const router = useRouter();
-  const { user, token, logout, getAuthHeaders } = useAuth();
+  const { user, token, logout, getAuthHeaders, loading: authLoading } = useAuth();
   const { t } = useTranslation();
 
-  useEffect(() => {
-    if (token && user) {
-      fetchCountries();
-    }
-  }, [token, user]);
+
 
   const fetchCountries = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3000/v1/countries', {
+      const response = await fetch(API_ENDPOINTS.COUNTRIES, {
         headers: getAuthHeaders(),
       });
       if (!response.ok) {
@@ -48,7 +45,7 @@ export default function Home() {
 
   const fetchCountryDetails = async (countrySlug) => {
     try {
-      const response = await fetch(`http://localhost:3000/v1/countries/${countrySlug}`, {
+      const response = await fetch(API_ENDPOINTS.COUNTRY_BY_SLUG(countrySlug), {
         headers: getAuthHeaders(),
       });
       if (!response.ok) {
@@ -81,14 +78,23 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!loading) {
-      if (!token || !user) {
-        router.push('/login');
-      }
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
     }
-  }, [loading, token, user, router]);
+    
+    if (!token || !user) {
+      setLoading(false);
+      router.push('/login');
+      return;
+    }
+    
+    if (token && user) {
+      fetchCountries();
+    }
+  }, [token, user, authLoading, router]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return <LoadingSkeleton />;
   }
 
