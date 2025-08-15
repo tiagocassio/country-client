@@ -42,6 +42,20 @@
     "currencies": "Moedas",
     "languages": "Idiomas",
     "timeZones": "Fusos horários",
-    "close": "Fechar"
+    "close": "Fechar",
+    "loading": "Carregando...",
+    "loadMore": "Carregar Mais Países",
+    "loadingMore": "Carregando mais países...",
+    "loadMoreCountries": "Carregar Mais Países",
+    "retry": "Tentar Novamente",
+    "error": "Erro",
+    "or": "OU",
+    "loginFailed": "Falha no login",
+    "noTokenReceived": "Nenhum token de autenticação recebido no corpo da resposta",
+    "useAuthError": "useAuth deve ser usado dentro de um AuthProvider",
+    "failedToFetchCountries": "Falha ao buscar países",
+    "failedToFetchCountryDetails": "Falha ao buscar detalhes do país",
+    "noAuthenticationTokenAvailable": "Nenhum token de autenticação disponível",
+    "failedToFetchMoreCountries": "Falha ao buscar mais países"
   }
 }

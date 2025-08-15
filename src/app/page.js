@@ -14,6 +14,9 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const router = useRouter();
   const { user, token, logout, getAuthHeaders, loading: authLoading } = useAuth();
   const { t } = useTranslation();
@@ -32,10 +35,11 @@ export default function Home() {
           router.push('/login');
           return;
         }
-        throw new Error('Failed to fetch countries');
+        throw new Error(t('auth.failedToFetchCountries'));
       }
       const data = await response.json();
-      setCountries(data);
+      setCountries(data.data || []);
+      setHasMore(data.pagination?.page < data.pagination?.last);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -54,7 +58,7 @@ export default function Home() {
           router.push('/login');
           return;
         }
-        throw new Error('Failed to fetch country details');
+        throw new Error(t('auth.failedToFetchCountryDetails'));
       }
       const data = await response.json();
       setSelectedCountry(data);
@@ -72,6 +76,55 @@ export default function Home() {
     country.alpha2_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     country.alpha3_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const loadMoreCountries = () => {
+    if (!token || !user) {
+      console.log('Cannot load more countries: no authentication');
+      return;
+    }
+    
+    if (hasMore && !isLoadingMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchMoreCountries(nextPage);
+    }
+  };
+
+  const fetchMoreCountries = async (page) => {
+    try {
+      setIsLoadingMore(true);
+      
+      if (!token) {
+        throw new Error(t('auth.noAuthenticationTokenAvailable'));
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+      
+      console.log('Fetching more countries with headers:', headers);
+      
+      const response = await fetch(`${API_ENDPOINTS.COUNTRIES}?page=${page}`, {
+        headers,
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          router.push('/login');
+          return;
+        }
+        throw new Error(t('auth.failedToFetchMoreCountries'));
+      }
+      const data = await response.json();
+      setCountries(prev => [...prev, ...(data.data || [])]);
+      setHasMore(data.pagination?.page < data.pagination?.last);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const closeDetails = () => {
     setSelectedCountry(null);
@@ -94,6 +147,17 @@ export default function Home() {
     }
   }, [token, user, authLoading, router]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 100) {
+        loadMoreCountries();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoadingMore, token, user]);
+
   if (loading || authLoading) {
     return <LoadingSkeleton />;
   }
@@ -109,8 +173,8 @@ export default function Home() {
           <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Error: {error}</span>
-          <button className="btn btn-sm" onClick={fetchCountries}>Retry</button>
+                      <span>{t('auth.error')}: {error}</span>
+                      <button className="btn btn-sm" onClick={fetchCountries}>{t('auth.retry')}</button>
         </div>
       </div>
     );
@@ -330,6 +394,25 @@ export default function Home() {
             <div className="text-6xl mb-4">🌍</div>
             <h3 className="text-xl font-semibold mb-2">{t('countries.noCountriesFound')}</h3>
             <p className="text-base-content/70">{t('countries.adjustSearchTerms')}</p>
+          </div>
+        )}
+
+        {hasMore && (
+          <div className="flex justify-center items-center mt-8 mb-4">
+            <button
+              className={`btn btn-primary ${isLoadingMore ? 'loading' : ''}`}
+              onClick={loadMoreCountries}
+              disabled={isLoadingMore || !token || !user}
+            >
+              {isLoadingMore ? t('countries.loading') : t('countries.loadMoreCountries')}
+            </button>
+          </div>
+        )}
+
+        {isLoadingMore && (
+          <div className="flex justify-center items-center mt-4 mb-4">
+            <div className="loading loading-spinner loading-md"></div>
+            <span className="ml-2 text-base-content/70">{t('countries.loadingMore')}</span>
           </div>
         )}
       </div>

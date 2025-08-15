@@ -35,14 +35,14 @@ export default function LoginPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+        throw new Error(errorData.error || t('auth.loginFailed'));
       }
 
       const data = await response.json();
       const token = data.token;
       
       if (!token) {
-        throw new Error('No authentication token received in response body.');
+        throw new Error(t('auth.noTokenReceived'));
       }
       
       login(data.user, token);
@@ -119,7 +119,7 @@ export default function LoginPage() {
             </div>
           </form>
 
-          <div className="divider">OR</div>
+          <div className="divider">{t('auth.or')}</div>
 
           <div className="text-center">
             <p className="text-sm text-base-content/70 mb-2">
