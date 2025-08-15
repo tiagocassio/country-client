@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# World Countries API Client
+
+A Next.js client application that consumes a World Countries API.
+
+## Prerequisites
+
+Before running this client application, you need to have the Rails API running. The API should be accessible at `http://localhost:3000`.
+
+### Rails API Setup
+
+1. Navigate to the Rails API directory:
+   ```bash
+   cd ../country_api
+   ```
+
+2. Install dependencies and start the server:
+   ```bash
+   bundle install
+   docker compose up -d
+   ```
+
+   The API will be available at `http://localhost:3000`
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
+2. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Open your browser** and navigate to `http://localhost:3001`
+
+## Authentication
+
+The client application uses JWT-based authentication with the Rails API. Users must create an account and sign in to access the countries data.
+
+### User Registration
+- Navigate to `/register` to create a new account
+- Provide email and password (minimum 6 characters)
+- Email verification is required (check your email)
+
+### User Login
+- Navigate to `/login` to sign in
+- Use your registered email and password
+- Upon successful authentication, you'll be redirected to the countries page
+
+### Authentication Flow
+1. User visits the home page
+2. If not authenticated, they are redirected to the login page
+3. After authentication, they can access the countries explorer
+4. Authentication token is stored in localStorage
+5. API requests include the authentication token in headers
+
+## API Endpoints
+
+The client application consumes the following Rails API endpoints:
+
+- `POST /sign_up` - User registration
+- `POST /sign_in` - User authentication
+- `GET /v1/countries` - List all countries (requires authentication)
+- `GET /v1/countries/:id` - Get detailed information about a specific country (requires authentication)
+
+## Testing the Application
+
+### 1. Start the Rails API
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd ../country_api
+rails server
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Start the Next.js Client
+```bash
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 3. Test Authentication
+1. Open `http://localhost:3001` in your browser
+2. Click "Create Account" to register a new user
+3. Check your email for verification (if required)
+4. Sign in with your credentials
+5. Explore the countries!
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Test API Endpoints
+You can test the API endpoints directly using curl:
 
-## Learn More
+```bash
+# Register a new user
+curl -X POST http://localhost:3000/sign_up \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123","password_confirmation":"password123"}'
 
-To learn more about Next.js, take a look at the following resources:
+# Sign in
+curl -X POST http://localhost:3000/sign_in \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}'
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Get countries (use the token from the sign_in response)
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:3000/v1/countries
+```

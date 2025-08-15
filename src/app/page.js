@@ -1,103 +1,332 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from './contexts/AuthContext';
+import ThemeToggle from './components/ThemeToggle';
+import LoadingSkeleton from './components/LoadingSkeleton';
+import { useTranslation } from '../i18n/useTranslation';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [countries, setCountries] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const router = useRouter();
+  const { user, token, logout, getAuthHeaders } = useAuth();
+  const { t } = useTranslation();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    if (token && user) {
+      fetchCountries();
+    }
+  }, [token, user]);
+
+  const fetchCountries = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:3000/v1/countries', {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch countries');
+      }
+      const data = await response.json();
+      setCountries(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCountryDetails = async (countrySlug) => {
+    try {
+      const response = await fetch(`http://localhost:3000/v1/countries/${countrySlug}`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        if (response.status === 401) {
+          logout();
+          router.push('/login');
+          return;
+        }
+        throw new Error('Failed to fetch country details');
+      }
+      const data = await response.json();
+      setSelectedCountry(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleCountryClick = (country) => {
+    fetchCountryDetails(country.id);
+  };
+
+  const filteredCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    country.alpha2_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    country.alpha3_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const closeDetails = () => {
+    setSelectedCountry(null);
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      if (!token || !user) {
+        router.push('/login');
+      }
+    }
+  }, [loading, token, user, router]);
+
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (!token || !user) {
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-base-200 flex items-center justify-center">
+        <div className="alert alert-error max-w-md">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Error: {error}</span>
+          <button className="btn btn-sm" onClick={fetchCountries}>Retry</button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-base-200">
+        <div className="navbar bg-base-100 shadow-lg">
+        <div className="navbar-start">
+                      <a className="btn btn-ghost text-xl">
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              {t('countries.worldCountries')}
+            </a>
+        </div>
+        <div className="navbar-end">
+          <div className="form-control mr-4">
+            <input
+              type="text"
+              placeholder={t('countries.searchCountries')}
+              className="input input-bordered w-64 h-10 text-base"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <ThemeToggle />
+          <div className="dropdown dropdown-end ml-2">
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+              <div className="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                <span className="text-sm font-semibold">
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </span>
+              </div>
+            </div>
+            <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+              <li className="menu-title">
+                <span className="text-sm text-base-content/70">{user?.email}</span>
+              </li>
+              <li><button onClick={logout}>{t('auth.logout')}</button></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="container-fluid mx-auto px-4 py-8">
+        {selectedCountry && (
+          <div className="modal modal-open">
+            <div className="modal-box max-w-4xl">
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="font-bold text-2xl">{selectedCountry.name}</h3>
+                <button className="btn btn-sm btn-circle btn-ghost" onClick={closeDetails}>✕</button>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="card bg-base-100 shadow-xl">
+                    <figure className="px-6 pt-6">
+                      <img 
+                        src={selectedCountry.flag} 
+                        alt={`Flag of ${selectedCountry.name}`}
+                        className="rounded-xl w-full h-48 object-cover"
+                      />
+                    </figure>
+                    <div className="card-body">
+                      <h2 className="card-title">{selectedCountry.official_name || selectedCountry.name}</h2>
+                      <div className="stats stats-vertical shadow">
+                        <div className="stat">
+                          <div className="stat-title">{t('countries.population')}</div>
+                          <div className="stat-value text-primary">{selectedCountry.population?.toLocaleString() || 'N/A'}</div>
+                        </div>
+                        <div className="stat">
+                          <div className="stat-title">{t('countries.area')}</div>
+                          <div className="stat-value text-secondary">{selectedCountry.area ? `${selectedCountry.area.toLocaleString()} km²` : 'N/A'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="card bg-base-100 shadow-xl">
+                    <div className="card-body">
+                      <h3 className="card-title text-lg mb-4">{t('countries.countryInformation')}</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.capital')}:</span>
+                          <span>{selectedCountry.capital || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.region')}:</span>
+                          <span>{selectedCountry.region || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.subregion')}:</span>
+                          <span>{selectedCountry.subregion || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.alpha2Code')}:</span>
+                          <span className="badge badge-primary">{selectedCountry.alpha2_code || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.alpha3Code')}:</span>
+                          <span className="badge badge-secondary">{selectedCountry.alpha3_code || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{t('countries.callingCode')}:</span>
+                          <span>{selectedCountry.calling_code || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {(selectedCountry.currencies || selectedCountry.language || selectedCountry.time_zones) && (
+                    <div className="card bg-base-100 shadow-xl">
+                      <div className="card-body">
+                        <h3 className="card-title text-lg mb-4">{t('countries.additionalDetails')}</h3>
+                        <div className="space-y-3">
+                          {selectedCountry.currencies && (
+                            <div>
+                              <span className="font-semibold">{t('countries.currencies')}:</span>
+                              <div className="mt-1">
+                                {Array.isArray(selectedCountry.currencies) ? 
+                                  selectedCountry.currencies.map((currency, index) => (
+                                    <span key={index} className="badge badge-outline mr-2">{currency}</span>
+                                  )) : 
+                                  <span className="badge badge-outline">{selectedCountry.currencies}</span>
+                                }
+                              </div>
+                            </div>
+                          )}
+                          {selectedCountry.language && (
+                            <div>
+                              <span className="font-semibold">{t('countries.languages')}:</span>
+                              <div className="mt-1">
+                                {Array.isArray(selectedCountry.language) ? 
+                                  selectedCountry.language.map((lang, index) => (
+                                    <span key={index} className="badge badge-outline mr-2">{lang}</span>
+                                  )) : 
+                                  <span className="badge badge-outline">{selectedCountry.language}</span>
+                                }
+                              </div>
+                            </div>
+                          )}
+                          {selectedCountry.time_zones && (
+                            <div>
+                              <span className="font-semibold">{t('countries.timeZones')}:</span>
+                              <div className="mt-1">
+                                {Array.isArray(selectedCountry.time_zones) ? 
+                                  selectedCountry.time_zones.map((tz, index) => (
+                                    <span key={index} className="badge badge-outline mr-2">{tz}</span>
+                                  )) : 
+                                  <span className="badge badge-outline">{selectedCountry.time_zones}</span>
+                                }
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-action">
+                <button className="btn" onClick={closeDetails}>{t('countries.close')}</button>
+              </div>
+            </div>
+            <div className="modal-backdrop" onClick={closeDetails}></div>
+          </div>
+        )}
+
+        <div className="mb-8">
+                      <h1 className="text-3xl font-bold text-center mb-2">{t('countries.worldCountries')}</h1>
+            <p className="text-center text-base-content/70 mb-8">{t('countries.clickFlagForDetails')}</p>
+          
+          {searchTerm && (
+            <div className="text-center mb-4">
+              <p className="text-sm text-base-content/70">
+                {t('countries.showingResults', { count: filteredCountries.length, total: countries.length })}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-4">
+          {filteredCountries.map((country) => (
+            <div
+              key={country.id}
+              className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+              onClick={() => handleCountryClick(country)}
+            >
+              <figure className="px-4 pt-4">
+                <img
+                  src={country.flag}
+                  alt={`Bandeira do ${country.name}`}
+                  className="rounded-xl w-full h-24 object-cover"
+                />
+              </figure>
+              <div className="card-body p-4 text-center">
+                <h2 className="card-title text-base font-semibold text-center">{country.name}</h2>
+                <div className="flex justify-center space-x-2 mt-2">
+                  <span className="badge badge-primary badge-sm">{country.alpha2_code}</span>
+                  <span className="badge badge-secondary badge-sm">{country.alpha3_code}</span>
+                </div>
+                {country.capital && (
+                  <p className="text-xs text-center text-base-content/70 mt-2">
+                    {t('countries.capital')}: {country.capital}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {filteredCountries.length === 0 && searchTerm && (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🌍</div>
+            <h3 className="text-xl font-semibold mb-2">{t('countries.noCountriesFound')}</h3>
+            <p className="text-base-content/70">{t('countries.adjustSearchTerms')}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
